@@ -1,0 +1,18 @@
+---
+title: "datafeature"
+author: "Shiyu Tong"
+date: "2022-11-16"
+output: html_document
+---
+
+```{r}
+filepath <- "data/"
+raw_data <- read.csv(paste0(filepath,"geothermal.csv"))
+
+```
+
+
+```{r}
+head(raw_data)
+sort(table(raw_data['affiliation.country']),decreasing = TRUE)[1:20]
+```
