@@ -38,7 +38,31 @@ hist(which(x == TRUE),main = "CHINA rank  distribution",xlab = 'Rank index')
 ```
 
 
-```{r}
+Do T test among countires
 
+```{r}
+# NZ Rank
+X <- select_data$affiliation.country == 'New Zealand'
+NZ_rank <- which(X == TRUE)
+X <- select_data$affiliation.country == 'United States'
+USA_rank <- which(X == TRUE)
+X <- select_data$affiliation.country == 'China'
+CH_rank <- which(X == TRUE)
 
 ```
+
+
+```{r}
+t.test(NZ_rank,USA_rank)
+t.test(NZ_rank,CH_rank)
+```
+
+The T test result of NZ and USA. The p-value is 0.022. Smaller than 0.05. So it means that there is a difference between NZ and USA.
+
+On the other hand. There is no difference between NZ and China.
+
+
+
+
+
+
