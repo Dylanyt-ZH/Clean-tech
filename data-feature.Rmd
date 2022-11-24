@@ -14,5 +14,31 @@ raw_data <- read.csv(paste0(filepath,"geothermal.csv"))
 
 ```{r}
 head(raw_data)
-sort(table(raw_data['affiliation.country']),decreasing = TRUE)[1:20]
+top_countries <- names(sort(table(raw_data['affiliation.country']),decreasing = TRUE)[1:20])
+rank = sort(table(raw_data['affiliation.country']),decreasing = TRUE)[1:15]
+plot(rank)
+pie(rank, main="Pie Chart of Countries")
+```
+
+
+```{r}
+select_data <- raw_data[raw_data$affiliation.country %in% top_countries,]
+# new zealand avg rank
+x = select_data$affiliation.country == 'New Zealand'
+mean(which(x == TRUE))
+hist(which(x == TRUE),main = "New Zealand rank distribution",xlab = 'Rank index')
+# USA avg rank
+x = select_data$affiliation.country == 'United States'
+mean(which(x == TRUE))
+hist(which(x == TRUE),main = "USA rank  distribution",xlab = 'Rank index')
+# CHINA avg rank
+x = select_data$affiliation.country == 'China'
+mean(which(x == TRUE))
+hist(which(x == TRUE),main = "CHINA rank  distribution",xlab = 'Rank index')
+```
+
+
+```{r}
+
+
 ```
