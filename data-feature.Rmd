@@ -61,6 +61,7 @@ The T test result of NZ and USA. The p-value is 0.022. Smaller than 0.05. So it 
 
 On the other hand. There is no difference between NZ and China.
 
+### Check distribution
 
 
 
