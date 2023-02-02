@@ -14,8 +14,9 @@ api_key = config['API_key']
 conf.close()
 headers=  {'X-ELS-APIKey':api_key}
 
-def getabstract(filename,filepath = 'data/'):
-    keyword = filename.replace(".csv","")
+def getabstract(filename,filepath = 'data/NZ/'):
+    keyword = filename.replace("_NZ.csv","")
+    output_path = 'data/NZ/NZ_abstract/'
     raw_data = pd.read_csv(filepath + filename,header=0)
     raw_data["abstract"] = None
     raw_data["topic"] = keyword
@@ -33,18 +34,21 @@ def getabstract(filename,filepath = 'data/'):
         except:
             continue
     select_data = raw_data.dropna()
-    select_data.to_csv(filepath + keyword + '-selected.csv', encoding='utf-8',index=False)
+    select_data.to_csv(output_path + keyword + '_NZ-selected.csv', encoding='utf-8',index=False)
 
 
 
 
 
 if __name__ == '__main__':
-    filepath = 'data/'
+    filepath = 'data/NZ/'
     filelist = os.listdir(filepath)
-    
+    filelist.remove('NZ_abstract')
     print(filelist)
-    pool_obj = multiprocessing.Pool(4)
-    pool_obj.map(getabstract,iter(filelist))
+    for file in filelist:
+        getabstract(file)
+        pass
+    # pool_obj = multiprocessing.Pool(4)
+    # pool_obj.map(getabstract,iter(filelist))
 
 
