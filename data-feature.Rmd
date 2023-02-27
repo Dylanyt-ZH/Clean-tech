@@ -66,4 +66,114 @@ On the other hand. There is no difference between NZ and China.
 
 
 
+### Use all data
+```{r}
+filepath = 'data/selected/'
+filelist <- list.files(filepath)
+filelist
+raw_data <- data.frame()
+for (file in filelist){
+  #cat(file)
+  data <- read.csv(paste0(filepath, file))
+  raw_data <- rbind(raw_data,data)
+}
+```
 
+
+```{r}
+top_countries <- names(sort(table(raw_data['affiliation.country']),decreasing = TRUE)[1:30])
+rank = sort(table(raw_data['affiliation.country']),decreasing = TRUE)[1:15]
+plot(rank)
+pie(rank, main="Pie Chart of Countries")
+
+```
+
+```{r}
+GDP_data <- read.csv('data/GDP_data.csv')
+#summary(GDP_data)
+country_list <- c('United States','New Zealand','China','United Kingdom','France','India','Australia')
+GDP_data = GDP_data[which(GDP_data$Country.Name %in% country_list),]
+```
+
+```{r}
+# Using avg GDP 2000-2021
+GDP_data = GDP_data[,colnames(GDP_data)[c(1:2,45:66)]]
+GDP_data$avg_gdp <- rowMeans(GDP_data[,3:24])
+GDP_data$avg_gdp <- GDP_data$avg_gdp / 10e9
+```
+
+
+```{r}
+country_count <- table(raw_data['affiliation.country'])[country_list]
+country_gdp_rate <- c()
+
+for (country in country_list){
+  country_gdp_rate <- c(country_gdp_rate,country_count[country]/GDP_data[which(GDP_data$Country.Name==country),'avg_gdp'])
+}
+country_gdp_rate
+```
+
+value for each topic
+
+### Researcher Population
+```{r}
+researchers <- read.csv('data/Researchers.csv')
+researchers_mean <- aggregate(researchers$Value, list(researchers$LOCATION), FUN=mean) 
+country_list <- c('China','Germany','France','United Kingdom','New Zealand')
+country_count <- table(raw_data['affiliation.country'])[country_list]
+```
+
+
+```{r}
+colnames(researchers_mean) <- c('country','researchers_mean')
+researchers_mean$country <- country_list
+country_researcher_rate <- c()
+
+for (country in country_list){
+  country_researcher_rate <- c(country_researcher_rate,country_count[country]/researchers_mean[which(researchers_mean$country==country),'researchers_mean'])
+}
+country_researcher_rate
+```
+
+
+### University Count
+```{r}
+library(dplyr)
+country_list <- c('United States','New Zealand','China','United Kingdom','France','India','Australia','Germany')
+university_count <- raw_data[which(raw_data$affiliation.country %in% country_list),]
+university_count <- aggregate(university_count$affilname,list(university_count$affiliation.country,university_count$affilname),FUN = length )
+colnames(university_count) <- c('country','university','count')
+university_count <- aggregate(university_count$university,list(university_count$country),FUN = length )
+colnames(university_count) <- c('country','value')
+paper_count <- table(raw_data['affiliation.country'])[country_list]
+```
+
+```{r}
+country_uni_rate <- c()
+for (country in country_list){
+  country_uni_rate <- c(country_uni_rate,paper_count[country]/university_count[which(university_count$country==country),'value'])
+}
+country_uni_rate
+```
+
+
+
+### average citetion count
+```{r}
+select_data <- raw_data[which(raw_data$affiliation.country %in% country_list),]
+aggregate(select_data$citedby_count,list(select_data$affiliation.country),FUN = mean)
+```
+
+### Compare QS TOP500
+
+```{r}
+# unique(university_count[which(university_count$affiliation.country == 'New Zealand'),"affilname"])
+uni_list <- c('Auckland University of Technology','The University of Auckland','Lincoln University','University of Canterbury','The University of Waikato','University of Otago','Massey University','Victoria University of Wellington')
+country_list <- c('United States','New Zealand','China','United Kingdom','France','India','Australia','Germany')
+university_count <- raw_data[which(raw_data$affiliation.country %in% country_list),]
+university_count <- aggregate(university_count$affilname,list(university_count$affiliation.country,university_count$affilname),FUN = length )
+colnames(university_count) <- c('country','university','count')
+rm <- which(university_count$country =='New Zealand' & !(university_count$university %in% uni_list))
+university_count <- university_count[-rm,]
+
+```
