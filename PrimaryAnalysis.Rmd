@@ -1,0 +1,115 @@
+---
+title: "PrimaryAnalysis"
+author: "Shiyu Tong"
+date: "2023-03-20"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+library(ggplot2)
+infilepath <- 'data/raw_data/'
+```
+
+
+```{r}
+filelist <- list.files(infilepath)
+
+raw_data <- data.frame()
+for (file in filelist){
+  #cat(file)
+  data <- read.csv(paste0(infilepath, file))
+  data$topic <- gsub('.csv','',file)
+  raw_data <- rbind(raw_data,data)
+}
+rm(data)
+```
+
+```{r}
+GDP_data <- read.csv('data/GDP_data.csv')
+GDP_data = GDP_data[,colnames(GDP_data)[c(1:2,45:66)]]
+GDP_data$avg_gdp <- rowMeans(GDP_data[,3:24])
+#avg GDP unit: billion US dollor
+GDP_data$avg_gdp <- GDP_data$avg_gdp / 10e9
+GDP_data <- GDP_data[order(GDP_data$avg_gdp ,decreasing = TRUE),]
+```
+
+```{r}
+# TOP 5 GDP countries with NZ
+country_list <- c('United States','China','Japan','Germany','United Kingdom','New Zealand')
+# Similiar countries with NZ
+circular_economy <- c('Denmark','Finland','Singapore','Israel','Norway','New Zealand')
+```
+
+```{r}
+country_count <- table(raw_data['affiliation.country'])[country_list]
+country_gdp_rate <- c()
+for (country in country_list){
+  country_gdp_rate <- c(country_gdp_rate,country_count[country]/GDP_data[which(GDP_data$Country.Name==country),'avg_gdp'])
+}
+country_gdp_rate <- data.frame(country = names(country_gdp_rate),rate = country_gdp_rate,row.names = 1:length(country_gdp_rate))
+#png(paste0(outputpath,keyword,' GDP rate.png'))
+ggplot(data=country_gdp_rate,aes(x = country, y= rate)) + 
+  geom_bar(stat = 'identity') + 
+  geom_text(aes(label = round(rate,2)), vjust = 1.5, colour = "white") + 
+  labs(title = 'GDP rate for whole data') +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+```{r}
+topics <- unique(raw_data$topic)
+outputpath <- 'plots/'
+for (keyword in topics){
+    country_list <- c('United States','New Zealand','China','United Kingdom','France','India','Australia','Germany')
+    temp_data <- raw_data[which(raw_data$topic == keyword & raw_data$affiliation.country %in% country_list),]
+    
+    
+    # QS 500 university count
+    uni_selected <- temp_data[which(temp_data$affilname %in% QS500),]
+    uni_count <- aggregate(uni_selected$affilname,list(uni_selected$affiliation.country,uni_selected$affilname),FUN = length )
+    colnames(uni_count) <- c('Country','University','Count')
+    uni_count <- aggregate(uni_count$University,list(uni_count$Country),FUN = length)
+    colnames(uni_count) <- c('Country','Count')
+    paper_count <- table(uni_selected$affiliation.country)
+    country_QS500_rate <- c()
+    for (country in country_list){
+      country_QS500_rate <- c(country_QS500_rate,paper_count[country]/uni_count[which(uni_count$Country==country),'Count'])
+    }
+    png(paste0(outputpath,keyword,' QS 500 Rate.png'))
+    x <- barplot(country_QS500_rate,las = 2,main= paste0(keyword,' QS 500 Rate'))
+    text(x, country_QS500_rate+0.1 , round(country_QS500_rate,2) ,cex=1)
+    dev.off()
+    
+    # GDP
+    country_list <- c('United States','New Zealand','China','United Kingdom','France','India','Australia')
+    country_count <- table(temp_data['affiliation.country'])[country_list]
+    country_gdp_rate <- c()
+    
+    for (country in country_list){
+      country_gdp_rate <- c(country_gdp_rate,country_count[country]/GDP_data[which(GDP_data$Country.Name==country),'avg_gdp'])
+    }
+    png(paste0(outputpath,keyword,' GDP rate.png'))
+    x <- barplot(country_gdp_rate,las = 2,main = paste0(keyword,' GDP rate'))
+    text(x, country_gdp_rate+0.1 , round(country_gdp_rate,2) ,cex=1) 
+    dev.off()
+    # avg citition count
+    
+  
+    
+    # autor rate
+    autor <- aggregate(temp_data$autor,list(temp_data$affiliation.country),FUN = function(x) length(unique(x)))
+    colnames(autor) <- c("Country",'Autor')
+    paper_count <- table(temp_data$affiliation.country)
+    autor_rate <- c()
+     for (country in country_list){
+        autor_rate <- c(autor_rate,paper_count[country]/autor[which(autor$Country==country),'Autor'])
+     }
+    png(paste0(outputpath,keyword,' Autor rate.png'))
+    x <- barplot(autor_rate,las = 2,main = paste0(keyword,' Autor rate'))
+    text(x, autor_rate , round(autor_rate,2) ,cex=1) 
+    dev.off()
+}
+
+
+```

@@ -5,20 +5,7 @@ date: "2022-11-16"
 output: html_document
 ---
 
-```{r}
-filepath <- "data/"
-raw_data <- read.csv(paste0(filepath,"geothermal.csv"))
 
-```
-
-
-```{r}
-head(raw_data)
-top_countries <- names(sort(table(raw_data['affiliation.country']),decreasing = TRUE)[1:20])
-rank = sort(table(raw_data['affiliation.country']),decreasing = TRUE)[1:15]
-plot(rank)
-pie(rank, main="Pie Chart of Countries")
-```
 
 
 ```{r}
@@ -38,7 +25,7 @@ hist(which(x == TRUE),main = "CHINA rank  distribution",xlab = 'Rank index')
 ```
 
 
-Do T test among countires
+Do T test among countries
 
 ```{r}
 # NZ Rank
@@ -68,13 +55,14 @@ On the other hand. There is no difference between NZ and China.
 
 ### Use all data
 ```{r}
-filepath = 'data/selected/'
+filepath = 'data/raw_data/'
 filelist <- list.files(filepath)
 filelist
 raw_data <- data.frame()
 for (file in filelist){
   #cat(file)
   data <- read.csv(paste0(filepath, file))
+  data$topic <- gsub('.csv','',file)
   raw_data <- rbind(raw_data,data)
 }
 ```
@@ -84,7 +72,7 @@ for (file in filelist){
 top_countries <- names(sort(table(raw_data['affiliation.country']),decreasing = TRUE)[1:30])
 rank = sort(table(raw_data['affiliation.country']),decreasing = TRUE)[1:15]
 plot(rank)
-pie(rank, main="Pie Chart of Countries")
+pie(rank, main="The Paper amount of Countries")
 
 ```
 
@@ -113,8 +101,6 @@ for (country in country_list){
 country_gdp_rate
 ```
 
-value for each topic
-
 ### Researcher Population
 ```{r}
 researchers <- read.csv('data/Researchers.csv')
@@ -132,7 +118,7 @@ country_researcher_rate <- c()
 for (country in country_list){
   country_researcher_rate <- c(country_researcher_rate,country_count[country]/researchers_mean[which(researchers_mean$country==country),'researchers_mean'])
 }
-country_researcher_rate
+round(country_researcher_rate,4)
 ```
 
 
@@ -161,7 +147,9 @@ country_uni_rate
 ### average citetion count
 ```{r}
 select_data <- raw_data[which(raw_data$affiliation.country %in% country_list),]
-aggregate(select_data$citedby_count,list(select_data$affiliation.country),FUN = mean)
+avg_cite <- aggregate(select_data$citedby_count,list(select_data$affiliation.country),FUN = mean)
+colnames(avg_cite) <- c('country','avg_count')
+avg_cite[order(avg_cite$avg_count,decreasing = TRUE),]
 ```
 
 ### Compare QS TOP500
@@ -185,8 +173,6 @@ colnames(uni_count) <- c('Country','University','Count')
 uni_count <- aggregate(uni_count$University,list(uni_count$Country),FUN = length)
 colnames(uni_count) <- c('Country','Count')
 paper_count <- table(uni_selected$affiliation.country)
-
-
 country_QS500_rate <- c()
 for (country in country_list){
   country_QS500_rate <- c(country_QS500_rate,paper_count[country]/uni_count[which(uni_count$Country==country),'Count'])
@@ -194,5 +180,172 @@ for (country in country_list){
 sort(country_QS500_rate,decreasing = TRUE)
 ```
 
+```{r}
+NZ_data <- raw_data[which(raw_data$affiliation.country =='New Zealand'),]
+sort(table(NZ_data$topic),decreasing = TRUE)
+```
 
 
+### Compare rank unit output for each topic
+```{r}
+library(ggplot2)
+```
+
+```{r}
+keyword <- 'geothermal'
+country_list <- c('United States','New Zealand','China','United Kingdom','France','India','Australia','Germany')
+temp_data <- raw_data[which(raw_data$topic == keyword & raw_data$affiliation.country %in% country_list),]
+# QS 500 university count
+uni_selected <- temp_data[which(temp_data$affilname %in% QS500),]
+uni_count <- aggregate(uni_selected$affilname,list(uni_selected$affiliation.country,uni_selected$affilname),FUN = length )
+colnames(uni_count) <- c('Country','University','Count')
+uni_count <- aggregate(uni_count$University,list(uni_count$Country),FUN = length)
+colnames(uni_count) <- c('Country','Count')
+paper_count <- table(uni_selected$affiliation.country)
+country_QS500_rate <- c()
+for (country in country_list){
+  country_QS500_rate <- c(country_QS500_rate,paper_count[country]/uni_count[which(uni_count$Country==country),'Count'])
+}
+cat('QS 500 Uni count \n')
+sort(country_QS500_rate)
+barplot(country_QS500_rate,las = 2,main= paste0(keyword,' QS 500 Rate'))
+# Research Population
+country_list <- c('China','Germany','France','United Kingdom','New Zealand')
+country_count <- table(temp_data['affiliation.country'])[country_list]
+colnames(researchers_mean) <- c('country','researchers_mean')
+researchers_mean$country <- country_list
+country_researcher_rate <- c()
+
+for (country in country_list){
+  country_researcher_rate <- c(country_researcher_rate,country_count[country]/researchers_mean[which(researchers_mean$country==country),'researchers_mean'])
+}
+cat('Research Population \n')
+round(country_researcher_rate,4)
+barplot(country_researcher_rate,las = 2,main= paste0(keyword,' Research Population Rate'))
+# GDP
+country_list <- c('United States','New Zealand','China','United Kingdom','France','India','Australia')
+country_count <- table(temp_data['affiliation.country'])[country_list]
+country_gdp_rate <- c()
+
+for (country in country_list){
+  country_gdp_rate <- c(country_gdp_rate,country_count[country]/GDP_data[which(GDP_data$Country.Name==country),'avg_gdp'])
+}
+cat('GDP unit output\n')
+sort(country_gdp_rate)
+barplot(country_gdp_rate,las = 2,main = paste0(keyword,' GDP rate'))
+# avg citition count
+select_data <- raw_data[which(raw_data$affiliation.country %in% country_list),]
+avg_cite <- aggregate(select_data$citedby_count,list(select_data$affiliation.country),FUN = mean)
+colnames(avg_cite) <- c('country','avg_count')
+avg_cite[order(avg_cite$avg_count,decreasing = TRUE),]
+
+```
+
+
+```{r}
+topics <- unique(raw_data$topic)
+outputpath <- 'plots/'
+for (keyword in topics){
+    country_list <- c('United States','New Zealand','China','United Kingdom','France','India','Australia','Germany')
+    temp_data <- raw_data[which(raw_data$topic == keyword & raw_data$affiliation.country %in% country_list),]
+    
+    
+    # QS 500 university count
+    uni_selected <- temp_data[which(temp_data$affilname %in% QS500),]
+    uni_count <- aggregate(uni_selected$affilname,list(uni_selected$affiliation.country,uni_selected$affilname),FUN = length )
+    colnames(uni_count) <- c('Country','University','Count')
+    uni_count <- aggregate(uni_count$University,list(uni_count$Country),FUN = length)
+    colnames(uni_count) <- c('Country','Count')
+    paper_count <- table(uni_selected$affiliation.country)
+    country_QS500_rate <- c()
+    for (country in country_list){
+      country_QS500_rate <- c(country_QS500_rate,paper_count[country]/uni_count[which(uni_count$Country==country),'Count'])
+    }
+    png(paste0(outputpath,keyword,' QS 500 Rate.png'))
+    x <- barplot(country_QS500_rate,las = 2,main= paste0(keyword,' QS 500 Rate'))
+    text(x, country_QS500_rate+0.1 , round(country_QS500_rate,2) ,cex=1)
+    dev.off()
+    
+    # Research Population
+    # country_list <- c('China','Germany','France','United Kingdom','New Zealand')
+    # country_count <- table(temp_data['affiliation.country'])[country_list]
+    # colnames(researchers_mean) <- c('country','researchers_mean')
+    # researchers_mean$country <- country_list
+    # country_researcher_rate <- c()
+    # 
+    # for (country in country_list){
+    #   country_researcher_rate <- c(country_researcher_rate,country_count[country]/researchers_mean[which(researchers_mean$country==country),'researchers_mean'])
+    # }
+    # cat('Research Population \n')
+    # x <- barplot(country_researcher_rate,las = 2,main= paste0(keyword,' Research Population Rate'))
+    # text(x, country_researcher_rate , country_researcher_rate ,cex=1) 
+    
+    
+    # GDP
+    country_list <- c('United States','New Zealand','China','United Kingdom','France','India','Australia')
+    country_count <- table(temp_data['affiliation.country'])[country_list]
+    country_gdp_rate <- c()
+    
+    for (country in country_list){
+      country_gdp_rate <- c(country_gdp_rate,country_count[country]/GDP_data[which(GDP_data$Country.Name==country),'avg_gdp'])
+    }
+    png(paste0(outputpath,keyword,' GDP rate.png'))
+    x <- barplot(country_gdp_rate,las = 2,main = paste0(keyword,' GDP rate'))
+    text(x, country_gdp_rate+0.1 , round(country_gdp_rate,2) ,cex=1) 
+    dev.off()
+    # avg citition count
+    
+  
+    
+    # autor rate
+    autor <- aggregate(temp_data$autor,list(temp_data$affiliation.country),FUN = function(x) length(unique(x)))
+    colnames(autor) <- c("Country",'Autor')
+    paper_count <- table(temp_data$affiliation.country)
+    autor_rate <- c()
+     for (country in country_list){
+        autor_rate <- c(autor_rate,paper_count[country]/autor[which(autor$Country==country),'Autor'])
+     }
+    png(paste0(outputpath,keyword,' Autor rate.png'))
+    x <- barplot(autor_rate,las = 2,main = paste0(keyword,' Autor rate'))
+    text(x, autor_rate , round(autor_rate,2) ,cex=1) 
+    dev.off()
+}
+```
+
+```{r}
+autor <- aggregate(raw_data$autor,list(raw_data$affiliation.country),FUN = function(x) length(unique(x)))
+colnames(autor) <- c("Country",'Autor')
+topics <- unique(raw_data$topic)
+keyword <- 'geothermal'
+for (keyword in topics){
+    country_list <- c('United States','New Zealand','China','United Kingdom','France','India','Australia','Germany')
+    temp_data <- raw_data[which(raw_data$topic == keyword & raw_data$affiliation.country %in% country_list),]
+    autor <- aggregate(temp_data$autor,list(temp_data$affiliation.country),FUN = function(x) length(unique(x)))
+    colnames(autor) <- c("Country",'Autor')
+    paper_count <- table(temp_data$affiliation.country)
+    autor_rate <- c()
+     for (country in country_list){
+        autor_rate <- c(autor_rate,paper_count[country]/autor[which(autor$Country==country),'Autor'])
+    }
+    x <- barplot(autor_rate,las = 2,main = paste0(keyword,' Autor rate'))
+    text(x, autor_rate , round(autor_rate,2) ,cex=1) 
+    
+    }
+  
+
+```
+
+
+### Select top autor avg cititation count
+```{r}
+country_list <- c('United States','New Zealand','China','United Kingdom','France','India','Australia','Germany')
+select_data <- raw_data[which(raw_data$affiliation.country %in% country_list),]
+autor <- aggregate(select_data$citedby_count,list(select_data$autor,select_data$affiliation.country),FUN = mean)
+
+```
+
+index
+
+pie chart
+unit output
+topic model
