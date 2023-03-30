@@ -8,13 +8,13 @@ output: html_document
 ```{r}
 library(dplyr)
 library(ggplot2)
+library(gridExtra)
 infilepath <- 'data/raw_data/'
 ```
 
 
 ```{r}
 filelist <- list.files(infilepath)
-
 raw_data <- data.frame()
 for (file in filelist){
   #cat(file)
@@ -35,10 +35,30 @@ GDP_data <- GDP_data[order(GDP_data$avg_gdp ,decreasing = TRUE),]
 ```
 
 ```{r}
+RND_data <- read.csv('data/Research and development expenditure.csv',header = TRUE)
+RND_data = RND_data[,colnames(RND_data)[c(1:2,45:65)]]
+RND_data$avg_rnd_pre <- rowMeans(RND_data[,3:23],na.rm = TRUE)
+RND_data = merge(RND_data,GDP_data,by = 'Country.Name')
+RND_data = RND_data[,colnames(RND_data)[c(1:2,24,48)]]
+# unit : billion US dollar 20 years average data
+RND_data$avg_rnd = RND_data$avg_rnd_pre * RND_data$avg_gdp
+```
+
+```{r}
 # TOP 5 GDP countries with NZ
 country_list <- c('United States','China','Japan','Germany','United Kingdom','New Zealand')
 # Similiar countries with NZ
-circular_economy <- c('Denmark','Finland','Singapore','Israel','Norway','New Zealand')
+SAEs <- c('Denmark','Finland','Singapore','Israel','Norway','New Zealand')
+```
+
+```{r}
+filepath = 'data/QSrank.csv'
+QS500 <- read.csv(filepath,header = TRUE)
+QS500 <- QS500[1:500,5:7]
+QS500[QS500$country == 'China (Mainland)','country'] <- 'China'
+QS500 <- QS500[which(QS500$country %in% country_list),'institution']
+uni_selected <- raw_data[which(raw_data$affilname %in% QS500),]
+unique(uni_selected[which(uni_selected$affiliation.country == 'New Zealand'),'affilname'])
 ```
 
 ```{r}
@@ -52,21 +72,48 @@ country_gdp_rate <- data.frame(country = names(country_gdp_rate),rate = country_
 ggplot(data=country_gdp_rate,aes(x = country, y= rate)) + 
   geom_bar(stat = 'identity') + 
   geom_text(aes(label = round(rate,2)), vjust = 1.5, colour = "white") + 
-  labs(title = 'GDP rate for whole data') +
+  labs(title = 'GDP rate for whole data in TOP GDP Country',x='Country','') +
   theme(plot.title = element_text(hjust = 0.5))
+# ggsave(
+#   filename = 'GDP rate for whole data in TOP GDP Country.png'
+# )
 ```
 
 
 ```{r}
 topics <- unique(raw_data$topic)
+
 outputpath <- 'plots/'
 for (keyword in topics){
-    country_list <- c('United States','New Zealand','China','United Kingdom','France','India','Australia','Germany')
     temp_data <- raw_data[which(raw_data$topic == keyword & raw_data$affiliation.country %in% country_list),]
+    country_count <- table(temp_data['affiliation.country'])[country_list]
+    # GDP rate
+    country_gdp_rate <- c()
+    for (country in country_list){
+      country_gdp_rate <- c(country_gdp_rate,country_count[country]/GDP_data[which(GDP_data$Country.Name==country),'avg_gdp'])
+    }
+    country_gdp_rate <- data.frame(country = names(country_gdp_rate),rate = country_gdp_rate,
+                                   row.names = NULL)
+    p1 <- ggplot(data=country_gdp_rate,aes(x = country, y= rate)) + 
+      geom_bar(stat = 'identity') + 
+      geom_text(aes(label = round(rate,2)), vjust = 1.5, colour = "white") + 
+      labs(title = paste0(keyword,' GDP rate for whole data in TOP GDP Country'),x='Country','') +
+      theme(plot.title = element_text(hjust = 0.5))
     
-    
+    # RND rate
+    country_rnd_rate <- c()
+    for (country in country_list){
+       country_rnd_rate <- c(country_rnd_rate,country_count[country]/RND_data[which(RND_data$Country.Name==country),'avg_rnd'])
+    }
+    rnd_rate <- data.frame(country = c(names(country_rnd_rate)), 
+                                       rate = c(country_rnd_rate),row.names = NULL)
+    p2 <- ggplot(data=rnd_rate,aes(x = country, y= rate)) + 
+      geom_bar(stat = 'identity') +
+      geom_text(aes(label = round(rate,2)), vjust = 1.5, colour = "white") +
+      labs(title = paste0(keyword,' RND rate in TOP GDP countries')) +
+      theme(plot.title = element_text(hjust = 0.5))
     # QS 500 university count
-    uni_selected <- temp_data[which(temp_data$affilname %in% QS500),]
+    uni_selected <- raw_data[which(raw_data$affilname %in% QS500),]
     uni_count <- aggregate(uni_selected$affilname,list(uni_selected$affiliation.country,uni_selected$affilname),FUN = length )
     colnames(uni_count) <- c('Country','University','Count')
     uni_count <- aggregate(uni_count$University,list(uni_count$Country),FUN = length)
@@ -76,40 +123,91 @@ for (keyword in topics){
     for (country in country_list){
       country_QS500_rate <- c(country_QS500_rate,paper_count[country]/uni_count[which(uni_count$Country==country),'Count'])
     }
-    png(paste0(outputpath,keyword,' QS 500 Rate.png'))
-    x <- barplot(country_QS500_rate,las = 2,main= paste0(keyword,' QS 500 Rate'))
-    text(x, country_QS500_rate+0.1 , round(country_QS500_rate,2) ,cex=1)
-    dev.off()
-    
-    # GDP
-    country_list <- c('United States','New Zealand','China','United Kingdom','France','India','Australia')
-    country_count <- table(temp_data['affiliation.country'])[country_list]
-    country_gdp_rate <- c()
-    
-    for (country in country_list){
-      country_gdp_rate <- c(country_gdp_rate,country_count[country]/GDP_data[which(GDP_data$Country.Name==country),'avg_gdp'])
-    }
-    png(paste0(outputpath,keyword,' GDP rate.png'))
-    x <- barplot(country_gdp_rate,las = 2,main = paste0(keyword,' GDP rate'))
-    text(x, country_gdp_rate+0.1 , round(country_gdp_rate,2) ,cex=1) 
-    dev.off()
-    # avg citition count
-    
-  
-    
-    # autor rate
-    autor <- aggregate(temp_data$autor,list(temp_data$affiliation.country),FUN = function(x) length(unique(x)))
-    colnames(autor) <- c("Country",'Autor')
-    paper_count <- table(temp_data$affiliation.country)
-    autor_rate <- c()
-     for (country in country_list){
-        autor_rate <- c(autor_rate,paper_count[country]/autor[which(autor$Country==country),'Autor'])
-     }
-    png(paste0(outputpath,keyword,' Autor rate.png'))
-    x <- barplot(autor_rate,las = 2,main = paste0(keyword,' Autor rate'))
-    text(x, autor_rate , round(autor_rate,2) ,cex=1) 
-    dev.off()
+    qs_rate = data.frame(country = c(names(country_QS500_rate)), 
+                                       rate = c(country_QS500_rate),row.names = NULL)
+    p3 <- ggplot(data=qs_rate,aes(x = country, y= rate)) + 
+      geom_bar(stat = 'identity') + 
+      geom_text(aes(label = round(rate,2)), vjust = 1.5, colour = "white") + 
+      labs(title = paste0(keyword,' QS 500 rate for whole data in TOP Country'),x='Country','') +
+      theme(plot.title = element_text(hjust = 0.5))
+    # avg cititation count
+    select_data <- temp_data[which(temp_data$affiliation.country %in% country_list),]
+    avg_cite <- aggregate(select_data$citedby_count,list(select_data$affiliation.country),FUN = mean)
+    colnames(avg_cite) <- c('country','avg_count')
+    p4 <- ggplot(data=avg_cite,aes(x = country, y= avg_count)) + 
+      geom_bar(stat = 'identity') + 
+      geom_text(aes(label = round(avg_count,2)), vjust = 1.5, colour = "white") + 
+      labs(title = paste0(keyword,' Average cititation count for whole data in TOP Country'),x='Country','') +
+      theme(plot.title = element_text(hjust = 0.5))
+    print(p1)
+    print(p2)
+    print(p3)
+    print(p4)
+   
 }
+```
+
+```{r}
+country_count <- table(raw_data['affiliation.country'])[country_list]
+# GDP rate
+country_gdp_rate <- c()
+for (country in country_list){
+  country_gdp_rate <- c(country_gdp_rate,country_count[country]/GDP_data[which(GDP_data$Country.Name==country),'avg_gdp'])
+}
+country_gdp_rate <- data.frame(country = names(country_gdp_rate),rate = country_gdp_rate,
+                               row.names = NULL)
+p1 <- ggplot(data=country_gdp_rate,aes(x = country, y= rate)) + 
+  geom_bar(stat = 'identity') + 
+  geom_text(aes(label = round(rate,2)), vjust = 1.5, colour = "white") + 
+  labs(title = 'GDP rate for whole data in TOP GDP Country',x='Country','') +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# RND rate
+country_rnd_rate <- c()
+for (country in country_list){
+   country_rnd_rate <- c(country_rnd_rate,country_count[country]/RND_data[which(RND_data$Country.Name==country),'avg_rnd'])
+}
+rnd_rate <- data.frame(country = c(names(country_rnd_rate)), 
+                                   rate = c(country_rnd_rate),row.names = NULL)
+p2 <- ggplot(data=rnd_rate,aes(x = country, y= rate)) + 
+  geom_bar(stat = 'identity') +
+  geom_text(aes(label = round(rate,2)), vjust = 1.5, colour = "white") +
+  labs(title = 'RND rate in TOP GDP countries') +
+  theme(plot.title = element_text(hjust = 0.5))
+# QS 500 university count
+uni_selected <- raw_data[which(raw_data$affilname %in% QS500),]
+uni_count <- aggregate(uni_selected$affilname,list(uni_selected$affiliation.country,uni_selected$affilname),FUN = length )
+colnames(uni_count) <- c('Country','University','Count')
+uni_count <- aggregate(uni_count$University,list(uni_count$Country),FUN = length)
+colnames(uni_count) <- c('Country','Count')
+paper_count <- table(uni_selected$affiliation.country)
+country_QS500_rate <- c()
+for (country in country_list){
+  country_QS500_rate <- c(country_QS500_rate,paper_count[country]/uni_count[which(uni_count$Country==country),'Count'])
+}
+qs_rate = data.frame(country = c(names(country_QS500_rate)), 
+                                   rate = c(country_QS500_rate),row.names = NULL)
+p3 <- ggplot(data=qs_rate,aes(x = country, y= rate)) + 
+  geom_bar(stat = 'identity') + 
+  geom_text(aes(label = round(rate,2)), vjust = 1.5, colour = "white") + 
+  labs(title = 'QS 500 rate for whole data in TOP Country',x='Country','') +
+  theme(plot.title = element_text(hjust = 0.5))
+# avg cititation count
+select_data <- raw_data[which(raw_data$affiliation.country %in% country_list),]
+avg_cite <- aggregate(select_data$citedby_count,list(select_data$affiliation.country),FUN = mean)
+colnames(avg_cite) <- c('country','avg_count')
+p4 <- ggplot(data=avg_cite,aes(x = country, y= avg_count)) + 
+  geom_bar(stat = 'identity') + 
+  geom_text(aes(label = round(avg_count,2)), vjust = 1.5, colour = "white") + 
+  labs(title = 'Average cititation count for whole data in TOP Country',x='Country','') +
+  theme(plot.title = element_text(hjust = 0.5))
+p1
+p2
+p3
+p4
+```
+
+```{r}
 
 
 ```
