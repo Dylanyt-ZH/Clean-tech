@@ -32,15 +32,6 @@ country_list <- c('United States','China','Japan','Germany','United Kingdom','Ne
 SAEs <- c('Denmark','Finland','Singapore','Israel','Norway','New Zealand')
 ```
 
-```{r}
-for (name in colnames(raw_data)){
-  cat(name)
-  cat('\n')
-}
-
-
-```
-
 
 
 ```{r}
@@ -60,7 +51,7 @@ RND_data_pp = RND_data_pp[,colnames(RND_data_pp)[c(1:2,45:65)]]
 RND_data_pp <- RND_data_pp[which(RND_data_pp$Country.Name %in% c(country_list,SAEs)),]
 RND_data_pp <- RND_data_pp[order(RND_data_pp$Country.Name ,decreasing = TRUE),]
 RND_data <- GDP_data[,c(1:2)] 
-results <- GDP_data[,c(3:23)] * RND_data_pp[,c(3:23)]
+results <- GDP_data[,c(3:23)] * RND_data_pp[,c(3:23)] / 100
 RND_data <- cbind(RND_data,results)
 # unit : billion US dollar 20 years average data
 RND_data$avg_rnd <- rowMeans(RND_data[,3:23],na.rm = TRUE)
@@ -80,7 +71,7 @@ raw_data[raw_data$affilname == 'Universitetet i Bergen','affilname'] <- 'Univers
 raw_data[raw_data$affilname == 'Norges Teknisk-Naturvitenskapelige Universitet','affilname'] <- 'University of Bergen'
 raw_data[raw_data$affilname == 'UiT Norges Arktiske Universitet','affilname'] <- 'University of Tromsø The Arctic University of Norway'
 uni_selected <- raw_data[which(raw_data$affilname %in% QS500[,'institution']),]
-unique(uni_selected[which(uni_selected$affiliation.country == 'Norway'),'affilname'])
+unique(uni_selected[which(uni_selected$affiliation.country == 'New Zealand'),'affilname'])
 ```
 
 ```{r}
@@ -138,6 +129,7 @@ for (keyword in topics){
     
     # QS 500 university count ，paper-count/university-count
     uni_selected <- raw_data[which(raw_data$affilname %in% QS500[,'institution']),]
+    uni_selected <- uni_selected[which(uni_selected$topic == keyword),]
     uni_count <- aggregate(uni_selected$affilname,list(uni_selected$affiliation.country,uni_selected$affilname),FUN = length )
     colnames(uni_count) <- c('Country','University','Count')
     uni_count <- aggregate(uni_count$University,list(uni_count$Country),FUN = length)
@@ -163,7 +155,7 @@ for (keyword in topics){
     p4 <- ggplot(data=avg_cite,aes(x = country, y= avg_count)) + 
       geom_bar(stat = 'identity') + 
       geom_text(aes(label = round(avg_count,2)), vjust = 1.5, colour = "white") + 
-      labs(title = ' Average cititation num in Top GDP countries', x= 'Country',y = 'Average cititation num',subtitle = keyword) +
+      labs(title = ' Average cititation num in Top GDP countries', x= 'Country',y = 'Average citation num',subtitle = keyword) +
       theme(plot.title = element_text(hjust = 0.5))
     print(p1)
     print(p2)
@@ -172,7 +164,7 @@ for (keyword in topics){
     ggsave(paste0(outputpath,keyword,' GDP Rate in Top GDP Country.png'),plot = p1)
     ggsave(paste0(outputpath,keyword,' R&D Rate in Top GDP Country.png'),plot = p2)
     ggsave(paste0(outputpath,keyword,' QS500 Uni Rate in Top GDP Country.png'),plot = p3)
-    ggsave(paste0(outputpath,keyword,' Average cititation in Top GDP Country.png'),plot = p4)
+    ggsave(paste0(outputpath,keyword,' Average citation in Top GDP Country.png'),plot = p4)
     
     
 }
@@ -199,7 +191,7 @@ for (keyword in topics){
       labs(title = ' GDP rate in SAEs',x='Country', subtitle = keyword,y = 'Paper Amount / GDP(billion US dollar)') +
       theme(plot.title = element_text(hjust = 0.5))
     
-    # RND rate
+    # R&D rate
     country_rnd_rate <- c()
     for (country in SAEs){
        country_rnd_rate <- c(country_rnd_rate,country_count[country]/RND_data[which(RND_data$Country.Name==country),'avg_rnd'])
@@ -209,10 +201,11 @@ for (keyword in topics){
     p2 <- ggplot(data=rnd_rate,aes(x = country, y= rate)) + 
       geom_bar(stat = 'identity') +
       geom_text(aes(label = round(rate,2)), vjust = 1.5, colour = "white") +
-      labs(title = ' RND rate in SAEs', x= 'Country',y = 'Paper Åmount / R&D(billion US dollar)',subtitle = keyword) +
+      labs(title = ' R&D rate in SAEs', x= 'Country',y = 'Paper Åmount / R&D(billion US dollar)',subtitle = keyword) +
       theme(plot.title = element_text(hjust = 0.5))
     # QS 500 university count
     uni_selected <- raw_data[which(raw_data$affilname %in% QS500[,'institution']),]
+    uni_selected <- uni_selected[which(uni_selected$topic == keyword),]
     uni_count <- aggregate(uni_selected$affilname,list(uni_selected$affiliation.country,uni_selected$affilname),FUN = length )
     colnames(uni_count) <- c('Country','University','Count')
     uni_count <- aggregate(uni_count$University,list(uni_count$Country),FUN = length)
@@ -236,7 +229,7 @@ for (keyword in topics){
     p4 <- ggplot(data=avg_cite,aes(x = country, y= avg_count)) + 
       geom_bar(stat = 'identity') + 
       geom_text(aes(label = round(avg_count,2)), vjust = 1.5, colour = "white") + 
-      labs(title = ' Average cititation num in SAEs', x= 'Country',y = 'Average cititation num',subtitle = keyword) +
+      labs(title = ' Average cititation num in SAEs', x= 'Country',y = 'Average citation num',subtitle = keyword) +
       theme(plot.title = element_text(hjust = 0.5))
     print(p1)
     print(p2)
@@ -245,7 +238,7 @@ for (keyword in topics){
     ggsave(paste0(outputpath,keyword,' GDP Rate in SAEs.png'),plot = p1)
     ggsave(paste0(outputpath,keyword,' R&D Rate in SAEs.png'),plot = p2)
     ggsave(paste0(outputpath,keyword,' QS500 Uni Rate in SAEs.png'),plot = p3)
-    ggsave(paste0(outputpath,keyword,' Average cititation in SAEs.png'),plot = p4)
+    ggsave(paste0(outputpath,keyword,' Average citation in SAEs.png'),plot = p4)
 }
 
 
@@ -315,7 +308,34 @@ p3
 p4
 ```
 
+```{r}
+# NON QS 500 Rate
+full_list <- c(country_list,SAEs)
+full_list <- unique(full_list)
+full_paper_count <- table(raw_data['affiliation.country'])[full_list]
+uni_selected <- raw_data[which(raw_data$affilname %in% QS500[,'institution']),]
+qs_paper_count <- table(uni_selected['affiliation.country'])[full_list]
+non_qs_rate <- 1 - qs_paper_count/full_paper_count
+full_paper_count
+qs_paper_count
+round(non_qs_rate,2)
 
+```
+
+```{r}
+# test section
+keyword <-'geothermal'
+# QS 500 university count
+countryname = 'China'
+length(which(raw_data$affiliation.country == countryname))
+uni_selected <- raw_data[which(raw_data$affilname %in% QS500[,'institution']),]
+length(which(uni_selected$affiliation.country == countryname))
+# nz_data <- raw_data[which(raw_data$affiliation.country == 'New Zealand'),]
+# aggregate(nz_data$doi~nz_data$affilname,FUN = length)
+
+
+
+```
 
 ```{r}
 # GDP vs Paper amount
@@ -353,4 +373,36 @@ p <- ggplot(RND_Paper, aes(x=reorder(Country.Name,avg_rnd))) +
 
 print(p)
 ggsave(paste0(outputpath,'R&D vs Paper Amount.png'),plot = p)
+```
+
+
+```{r}
+# basic data overview
+p <- ggplot(data = GDP_data, mapping = aes(x = Country.Name,y = avg_gdp)) +
+  geom_bar(stat = 'identity') +
+  coord_flip() +
+  labs(title = "Average GDP for each country(US-billion dollar,2000-2021)",x = 'Country', y= 'GDP value') 
+p
+ggsave(paste0(outputpath,'Average GDP for each country.png'),plot = p)
+
+#R&D
+p <- ggplot(data = RND_data, mapping = aes(x = Country.Name,y = avg_rnd)) +
+  geom_bar(stat = 'identity') +
+  coord_flip() +
+  labs(title = "Average R&D for each country(US-billion dollar,2000-2020)",x = 'Country', y= 'R&D value') 
+p
+ggsave(paste0(outputpath,'Average R&D for each country.png'),plot = p)
+
+QS_count <- aggregate(QS500$institution~QS500$country ,FUN = length)
+colnames(QS_count) <- c('country','uni_count')
+
+p <- ggplot(data = QS_count, mapping = aes(x = country,y = uni_count)) +
+  geom_bar(stat = 'identity') +
+  coord_flip() +
+  labs(title = "QS Top 500 University for each country(QS 2021 Version)",x = 'Country', y= 'University Count') 
+p
+ggsave(paste0(outputpath,'QS500 count for each country.png'),plot = p)
+
+
+
 ```
