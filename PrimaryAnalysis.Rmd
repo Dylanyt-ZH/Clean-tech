@@ -5,7 +5,7 @@ date: "2023-03-20"
 output: html_document
 ---
 
-```{r}
+```{r,warning=FALSE}
 library(dplyr)
 library(ggplot2)
 library(gridExtra)
@@ -32,7 +32,32 @@ country_list <- c('United States','China','Japan','Germany','United Kingdom','Ne
 SAEs <- c('Denmark','Finland','Singapore','Israel','Norway','New Zealand')
 ```
 
+```{r}
+raw_data <- raw_data[which(raw_data$affiliation.country %in% unique(c(country_list,SAEs))),]
+top_countries <- names(sort(table(raw_data['affiliation.country']),decreasing = TRUE))
+rank <-  sort(table(raw_data['affiliation.country']),decreasing = TRUE)
+per <-  round(rank / sum(rank) * 100,1)
+rank <- data.frame(rank)
+colnames(rank) <- c('Country','Count')
 
+pie <- ggplot(rank, aes(x="", y=Count, fill=Country)) +
+  geom_bar(stat="identity", width=1) +
+  coord_polar("y", start=0) +
+  geom_text(aes(label = paste0(per,"%")) ,position = position_stack(vjust = 0.5)) + 
+  labs(title = 'Percentage of Paper Count')
+
+pie
+
+ggsave(paste0('plots/','Paper count pie chart.png'),plot = pie)
+```
+
+
+```{r}
+p_hist <- ggplot(raw_data, aes(x = citedby_count, fill = affiliation.country)) + 
+          geom_histogram(binwidth = 10)
+p_hist
+
+```
 
 ```{r}
 GDP_data <- read.csv('data/GDP_data.csv')

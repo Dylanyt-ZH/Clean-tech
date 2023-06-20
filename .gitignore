@@ -3,3 +3,6 @@ data/*
 .gitignore
 config.json
 test.ipynb
+.RData
+.Rhistory
+.ipynb_checkpoints
